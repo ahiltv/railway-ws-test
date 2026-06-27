@@ -8,47 +8,60 @@ const server = http.createServer(app);
 
 const WS_PATH = "/ws/dmtnetwork";
 
-// 🧠 MAIN CONFIG (سنایی)
-const BACKEND_SERVER = "104.16.74.158";
+// 🧠 Sanaei backend (your real VPN core)
+const BACKEND_HOST = "x.newfacesis.xyz";
 const BACKEND_PORT = 8443;
 
-// 🌐 Home (Worker style)
+// =======================
+// 🌐 HOME
+// =======================
 app.get("/", (req, res) => {
   res.send("DMTnetwork Worker Gateway Online");
 });
 
-// 🔥 Proxy-like endpoint (Worker behavior)
-app.get("/proxy", async (req, res) => {
-  try {
-    res.json({
-      status: "ok",
-      message: "Gateway active",
-      backend: BACKEND_SERVER
-    });
-  } catch (e) {
-    res.status(500).send("error");
-  }
+// =======================
+// 🔥 SIMPLE PROXY CHECK
+// =======================
+app.get("/proxy", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Gateway active",
+    backend: BACKEND_HOST
+  });
 });
 
-// ⚡ Config generator (مثل Worker API)
+// =======================
+// ⚡ CONFIG GENERATOR
+// =======================
 app.get("/config/:id", (req, res) => {
   const id = req.params.id;
 
-  const config = {
-    id,
-    server: BACKEND_SERVER,
+  res.json({
+    id: id,
+    server: BACKEND_HOST,
     port: BACKEND_PORT,
     type: "trojan/ws",
     security: "tls",
     path: "/assets/api/v1/sync",
-    host: "x.newfacesis.xyz",
-    sni: "x.newfacesis.xyz"
-  };
-
-  res.json(config);
+    host: BACKEND_HOST,
+    sni: BACKEND_HOST
+  });
 });
 
-// ⚡ WebSocket control layer
+// =======================
+// 🚀 BRIDGE TEST (NO CRASH)
+// =======================
+app.get("/go", (req, res) => {
+  res.json({
+    status: "running",
+    message: "Bridge ready (no direct tunnel yet)",
+    backend: BACKEND_HOST
+  });
+});
+
+// =======================
+// ⚡ WEB SOCKET GATEWAY
+// =======================
 const wss = new WebSocket.Server({
   server,
   path: WS_PATH
@@ -61,42 +74,24 @@ wss.on("connection", (ws) => {
   }));
 
   ws.on("message", (msg) => {
-    console.log("WS:", msg.toString());
-
     ws.send(JSON.stringify({
       event: "echo",
       data: msg.toString()
     }));
   });
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
 });
 
-// 🚀 start
+// =======================
+// 🚀 START SERVER
+// =======================
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("DMT Worker Gateway running");
+  console.log("HTTP OK");
   console.log("WS:", WS_PATH);
-});
-
-const axios = require("axios");
-
-// 🚀 Forward to Sanaei (REAL BRIDGE)
-app.get("/go", async (req, res) => {
-  try {
-    const response = await axios.get("https://x.newfacesis.xyz", {
-      timeout: 5000
-    });
-
-    res.json({
-      status: "connected",
-      backend: "sanaei",
-      data: response.data
-    });
-
-  } catch (e) {
-    res.json({
-      status: "error",
-      message: "cannot reach sanaei"
-    });
-  }
 });
