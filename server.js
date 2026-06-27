@@ -77,3 +77,26 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("DMT Worker Gateway running");
   console.log("WS:", WS_PATH);
 });
+
+const axios = require("axios");
+
+// 🚀 Forward to Sanaei (REAL BRIDGE)
+app.get("/go", async (req, res) => {
+  try {
+    const response = await axios.get("https://x.newfacesis.xyz", {
+      timeout: 5000
+    });
+
+    res.json({
+      status: "connected",
+      backend: "sanaei",
+      data: response.data
+    });
+
+  } catch (e) {
+    res.json({
+      status: "error",
+      message: "cannot reach sanaei"
+    });
+  }
+});
