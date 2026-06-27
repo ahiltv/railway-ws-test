@@ -5,39 +5,62 @@ const WebSocket = require("ws");
 const app = express();
 const server = http.createServer(app);
 
-// 🔥 WebSocket Path (قابل تغییر)
 const WS_PATH = "/ws/dmtnetwork";
 
+// 🧠 Users store (simple memory)
+const users = new Map();
+
+// 🌐 Home
+app.get("/", (req, res) => {
+  res.send("DMTnetwork Gateway Online");
+});
+
+// 🔑 Config generator endpoint (VERY IMPORTANT)
+app.get("/config/:id", (req, res) => {
+  const id = req.params.id;
+
+  const config = {
+    id: id,
+    server: "railway-ws-test-production.up.railway.app",
+    port: 443,
+    path: WS_PATH,
+    security: "tls",
+    type: "ws",
+    sni: "railway-ws-test-production.up.railway.app"
+  };
+
+  res.json(config);
+});
+
+// ⚡ WebSocket Server
 const wss = new WebSocket.Server({
   server,
   path: WS_PATH
 });
 
-// 🌐 HTTP Test Route
-app.get("/", (req, res) => {
-  res.send("DMTnetwork OK");
-});
-
-// ⚡ WebSocket Connection
 wss.on("connection", (ws) => {
-  console.log("Client connected");
+  const userId = Math.random().toString(36).substring(7);
+  users.set(userId, ws);
 
-  ws.send("DMTnetwork connected");
+  ws.send(JSON.stringify({
+    event: "connected",
+    id: userId,
+    system: "DMTnetwork"
+  }));
 
   ws.on("message", (msg) => {
-    console.log("Received:", msg.toString());
     ws.send("echo: " + msg);
   });
 
   ws.on("close", () => {
-    console.log("Client disconnected");
+    users.delete(userId);
   });
 });
 
-// 🚀 Port config (Railway auto)
+// 🚀 Start
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("DMTnetwork server running on port", PORT);
-  console.log("WebSocket path:", WS_PATH);
+  console.log("DMTnetwork Gateway running on", PORT);
+  console.log("WS Path:", WS_PATH);
 });
