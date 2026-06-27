@@ -1,66 +1,79 @@
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
+const axios = require("axios");
 
 const app = express();
 const server = http.createServer(app);
 
 const WS_PATH = "/ws/dmtnetwork";
 
-// 🧠 Users store (simple memory)
-const users = new Map();
+// 🧠 MAIN CONFIG (سنایی)
+const BACKEND_SERVER = "104.16.74.158";
+const BACKEND_PORT = 8443;
 
-// 🌐 Home
+// 🌐 Home (Worker style)
 app.get("/", (req, res) => {
-  res.send("DMTnetwork Gateway Online");
+  res.send("DMTnetwork Worker Gateway Online");
 });
 
-// 🔑 Config generator endpoint (VERY IMPORTANT)
+// 🔥 Proxy-like endpoint (Worker behavior)
+app.get("/proxy", async (req, res) => {
+  try {
+    res.json({
+      status: "ok",
+      message: "Gateway active",
+      backend: BACKEND_SERVER
+    });
+  } catch (e) {
+    res.status(500).send("error");
+  }
+});
+
+// ⚡ Config generator (مثل Worker API)
 app.get("/config/:id", (req, res) => {
   const id = req.params.id;
 
   const config = {
-    id: id,
-    server: "railway-ws-test-production.up.railway.app",
-    port: 443,
-    path: WS_PATH,
+    id,
+    server: BACKEND_SERVER,
+    port: BACKEND_PORT,
+    type: "trojan/ws",
     security: "tls",
-    type: "ws",
-    sni: "railway-ws-test-production.up.railway.app"
+    path: "/assets/api/v1/sync",
+    host: "x.newfacesis.xyz",
+    sni: "x.newfacesis.xyz"
   };
 
   res.json(config);
 });
 
-// ⚡ WebSocket Server
+// ⚡ WebSocket control layer
 const wss = new WebSocket.Server({
   server,
   path: WS_PATH
 });
 
 wss.on("connection", (ws) => {
-  const userId = Math.random().toString(36).substring(7);
-  users.set(userId, ws);
-
   ws.send(JSON.stringify({
     event: "connected",
-    id: userId,
-    system: "DMTnetwork"
+    system: "DMT Worker Gateway"
   }));
 
   ws.on("message", (msg) => {
-    ws.send("echo: " + msg);
-  });
+    console.log("WS:", msg.toString());
 
-  ws.on("close", () => {
-    users.delete(userId);
+    ws.send(JSON.stringify({
+      event: "echo",
+      data: msg.toString()
+    }));
   });
 });
 
-// 🚀 Start
+// 🚀 start
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("DMTnetwork Gateway running on", PORT);
-  console.log("WS Path:", WS_PATH);
+  console.log("DMT Worker Gateway running");
+  console.log("WS:", WS_PATH);
 });
